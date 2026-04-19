@@ -2,11 +2,11 @@
 
 ## Critical Issues
 - **[api/contact.ts:24]** Exposed API Keys — Hardcoded `onboarding@resend.dev` used as sender email. While not a full API key, this exposes internal service details and could aid phishing or spoofing.
-  - **Status**: ✅ Fixed — replaced with `process.env.SENDER_EMAIL` with fallback
+  - **Fix**: Replace with environment variable `SENDER_EMAIL`.
 - **[api/contact.ts:25, 34]** Exposed API Keys — Use of `process.env.OWNER_EMAIL` without validation. If undefined, defaults to a hardcoded fallback, which may expose internal structure.
-  - **Status**: ✅ Fixed — added validation and removed risky fallbacks
+  - **Fix**: Enforce required environment variables and avoid fallbacks that leak implementation.
 - **[src/emails/contact-notification.js, src/emails/contact-confirmation.js]** XSS (Cross-Site Scripting) — User input (`name`, `email`, `message`) is directly interpolated into HTML email templates without sanitization.
-  - **Status**: ✅ Fixed — added `sanitizeInput()` function and applied to all user data
+  - **Fix**: Sanitize all user inputs before embedding in HTML emails.
 
 ## Warnings
 - **[api/contact.ts:30]** Data Exposure — Error message `"Failed to send message. Please try again later."` is generic, but the `console.error` logs full error details including potential stack traces or internal system info.

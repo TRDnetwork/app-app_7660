@@ -1,42 +1,43 @@
 # 📨 Email Setup Instructions
 
-This portfolio uses [Resend](https://resend.com) to send emails from the contact form via a Vercel serverless function.
+Your portfolio site uses **Resend** to deliver contact form submissions via a Vercel serverless function.
 
 ## Step 1: Get Your Resend API Key
-1. Sign up at [resend.com](https://resend.com)
-2. Create an API key (e.g., `re_123456...`)
-3. Keep it secure — never commit to version control
+1. Go to [resend.com](https://resend.com) and sign up or log in.
+2. Navigate to **API Keys** and create a new key (e.g., `portfolio-pro`).
+3. Copy the key (`re_...`).
 
 ## Step 2: Set Environment Variables in Vercel
-In your Vercel project dashboard, go to **Settings > Environment Variables** and add:
+In your Vercel project dashboard:
+- Add `RESEND_API_KEY` = `re_...` (your key from Resend)
+- Add `OWNER_EMAIL` = your personal email (e.g., `you@domain.com`)
 
-| Key               | Value                          |
-|-------------------|--------------------------------|
-| `RESEND_API_KEY`  | `re_123456...` (your key)      |
-| `OWNER_EMAIL`     | `you@yourdomain.com` (your real email) |
-
-⚠️ **Important**: Do NOT use `VITE_RESEND_API_KEY` — that would expose the key to the browser. Only server-side functions can access `RESEND_API_KEY`.
+> 🔒 Never use `VITE_RESEND_API_KEY` — that would expose your secret to the browser.
 
 ## Step 3: Verify Your Sending Domain
-1. In Resend Dashboard, verify your sending domain (e.g., `portfolio-pro.com`)
-2. Add the required DNS records (TXT + CNAME) to your domain provider
+1. In Resend Dashboard, go to **Domains**.
+2. Add and verify your domain (e.g., `your-portfolio.vercel.app` or custom domain).
+3. This improves email deliverability and prevents spam flags.
 
-## Step 4: Frontend Integration
-The frontend submits the form like this:
+## Step 4: Frontend Integration (Already Done)
+Your contact form submits like this:
 ```ts
 await fetch('/api/contact', {
   method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ name, email, message, _honey }),
+  body: JSON.stringify({ name, email, message }),
 });
 ```
+No client-side email logic — all secure server-side handling.
 
-No client-side email library is used — all sending happens securely in `api/contact.ts`.
+## ✅ Test the Flow
+1. Submit the form locally or in preview.
+2. Check your inbox for the notification.
+3. Verify the auto-reply was sent to the user.
 
-## Step 5: Test the Form
-Submit the contact form and check:
-- You receive the notification email
-- The user receives the confirmation email
-- Success toast appears for 4 seconds
+## 🛠️ Troubleshooting
+- Check Vercel logs (`/api/contact`) for errors.
+- Ensure `RESEND_API_KEY` is set and correct.
+- Confirm domain is verified in Resend.
+- Look for CORS issues (should be auto-handled by Vercel).
 
-✅ Done! Your contact form is now live and secure.
+Need help? Visit [Resend Docs](https://resend.com/docs) or check Vercel deployment logs.
