@@ -1,62 +1,70 @@
 import React from 'react';
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label: string;
+export type InputType = 'text' | 'email' | 'password' | 'tel' | 'url' | 'number';
+
+export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
+  label?: string;
   error?: string;
-  helpText?: string;
+  helperText?: string;
+  type?: InputType;
+  size?: 'sm' | 'md' | 'lg';
+  fullWidth?: boolean;
   required?: boolean;
 }
 
-const Input: React.FC<InputProps> = ({
-  label,
-  id,
-  error,
-  helpText,
-  required = false,
-  className = '',
-  ...props
-}) => {
-  const inputId = id || label.toLowerCase().replace(/\s+/g, '-');
-  const hasError = Boolean(error);
-
-  return (
-    <div className={className}>
-      <label
-        htmlFor={inputId}
-        className="block text-text-dim font-medium mb-2"
-      >
-        {label}
-        {required && <span className="text-red-600 ml-1">*</span>}
-      </label>
-      <input
-        type="text"
-        id={inputId}
-        className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-colors ${
-          hasError
-            ? 'border-red-500 focus:ring-red-500'
-            : 'border-surface focus:ring-accent'
-        } focus-glow`}
-        aria-invalid={hasError}
-        aria-describedby={
-          [hasError ? `${inputId}-error` : '', helpText ? `${inputId}-help` : '']
-            .filter(Boolean)
-            .join(' ') || undefined
-        }
-        required={required}
-        {...props}
-      />
-      {hasError && (
-        <p id={`${inputId}-error`} className="mt-1 text-red-600 text-sm" role="alert">
-          {error}
-        </p>
-      )}
-      {!hasError && helpText && (
-        <p id={`${inputId}-help`} className="mt-1 text-text-dim text-sm">
-          {helpText}
-        </p>
-      )}
-    </div>
-  );
+const sizeStyles = {
+  sm: 'text-sm px-3 py-1.5',
+  md: 'text-base px-4 py-2',
+  lg: 'text-lg px-4 py-3',
 };
 
+export const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ label, error, helperText, type = 'text', size = 'md', fullWidth = false, required = false, className = '', ...props }, ref) => {
+    const id = props.id || `input-${Math.random().toString(36).substr(2, 9)}`;
+    const hasError = !!error;
+
+    return (
+      <div className={fullWidth ? 'w-full' : ''}>
+        {label && (
+          <label htmlFor={id} className="block text-text-dim font-medium mb-1.5">
+            {label} {required && <span className="text-red-500">*</span>}
+          </label>
+        )}
+        <input
+          ref={ref}
+          type={type}
+          id={id}
+          className={`
+            w-full border rounded-md outline-none transition-all duration-200
+            ${sizeStyles[size]}
+            ${hasError 
+              ? 'border-red-500 focus:ring-2 focus:ring-red-200 focus:border-red-500 bg-red-50' 
+              : 'border-surface focus:ring-2 focus:ring-accent focus:ring-opacity-20 focus:border-accent bg-white'}
+            ${className}
+          `}
+          aria-invalid={hasError}
+          aria-describedby={
+            [hasError && `${id}-error`, helperText && `${id}-helper`].filter(Boolean).join(' ') || undefined
+          }
+          required={required}
+          {...props}
+        />
+        {hasError && (
+          <p id={`${id}-error`} className="mt-1.5 text-sm text-red-600" role="alert">
+            {error}
+          </p>
+        )}
+        {!hasError && helperText && (
+          <p id={`${id}-helper`} className="mt-1.5 text-sm text-text-dim">
+            {helperText}
+          </p>
+        )}
+      </div>
+    );
+  }
+);
+
+Input.displayName = 'Input';
+
 export default Input;
+---

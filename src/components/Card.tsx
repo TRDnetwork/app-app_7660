@@ -1,43 +1,58 @@
 import React from 'react';
 
-interface CardProps {
-  title?: string;
-  children: React.ReactNode;
+export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   header?: React.ReactNode;
+  body?: React.ReactNode;
   footer?: React.ReactNode;
   variant?: 'default' | 'elevated' | 'outlined';
-  className?: string;
+  radius?: 'sm' | 'md' | 'lg';
+  shadow?: 'sm' | 'md' | 'lg';
 }
 
-const baseClasses = 'rounded-lg border bg-white flex flex-col';
+const baseStyles = 'bg-surface rounded-md overflow-hidden flex flex-col';
 
-const variantClasses = {
-  default: 'border-surface shadow-sm',
-  elevated: 'border-surface shadow-md',
-  outlined: 'border-surface bg-transparent',
+const variantStyles = {
+  default: 'shadow-sm border border-surface',
+  elevated: 'shadow-md hover:shadow-lg transition-shadow duration-200',
+  outlined: 'border-2 border-surface shadow-sm',
 };
 
-const Card: React.FC<CardProps> = ({
-  title,
-  children,
-  header,
-  footer,
-  variant = 'default',
-  className = '',
-}) => {
-  return (
-    <div className={[baseClasses, variantClasses[variant], className].join(' ')}>
-      {header ? (
-        header
-      ) : title ? (
-        <div className="p-6 pb-4 border-b border-surface">
-          <h3 className="text-xl font-semibold text-text font-display">{title}</h3>
-        </div>
-      ) : null}
-      <div className="p-6 flex-grow">{children}</div>
-      {footer && <div className="p-6 pt-4 border-t border-surface">{footer}</div>}
-    </div>
-  );
+const radiusStyles = {
+  sm: 'rounded-sm',
+  md: 'rounded-md',
+  lg: 'rounded-lg',
 };
+
+const shadowStyles = {
+  sm: 'shadow-sm',
+  md: 'shadow-md',
+  lg: 'shadow-lg',
+};
+
+export const Card = React.forwardRef<HTMLDivElement, CardProps>(
+  ({ header, body, footer, variant = 'default', radius = 'md', shadow, className = '', children, ...props }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={`
+          ${baseStyles}
+          ${variantStyles[variant]}
+          ${radiusStyles[radius]}
+          ${shadow ? shadowStyles[shadow] : ''}
+          ${className}
+        `}
+        {...props}
+      >
+        {header && <div className="px-6 py-4 border-b border-surface bg-white/50">{header}</div>}
+        {body && <div className="p-6 flex-grow">{body}</div>}
+        {children}
+        {footer && <div className="px-6 py-4 border-t border-surface bg-white/50">{footer}</div>}
+      </div>
+    );
+  }
+);
+
+Card.displayName = 'Card';
 
 export default Card;
+---

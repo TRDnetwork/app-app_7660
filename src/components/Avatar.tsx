@@ -1,45 +1,56 @@
 import React from 'react';
 
-interface AvatarProps {
-  src?: string;
-  alt: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-  fallback?: string;
-  className?: string;
-}
+export type AvatarSize = 'sm' | 'md' | 'lg' | 'xl';
 
-const sizeClasses = {
+const sizeStyles: Record<AvatarSize, string> = {
   sm: 'w-8 h-8 text-sm',
   md: 'w-10 h-10 text-base',
-  lg: 'w-16 h-16 text-xl',
-  xl: 'w-24 h-24 text-2xl',
+  lg: 'w-12 h-12 text-lg',
+  xl: 'w-16 h-16 text-xl',
 };
 
-const Avatar: React.FC<AvatarProps> = ({
-  src,
-  alt,
-  size = 'md',
-  fallback,
-  className = '',
-}) => {
+export interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
+  src?: string;
+  alt?: string;
+  name?: string;
+  size?: AvatarSize;
+  rounded?: boolean;
+}
+
+export const Avatar = ({ src, alt = '', name, size = 'md', rounded = true, className = '', ...props }: AvatarProps) => {
+  const getInitials = (name?: string) => {
+    if (!name) return '';
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const initials = getInitials(name);
+
   return (
     <div
-      className={[
-        'rounded-full bg-surface flex items-center justify-center overflow-hidden',
-        sizeClasses[size],
-        className,
-      ].join(' ')}
-      aria-label={alt}
+      className={`
+        inline-flex items-center justify-center overflow-hidden
+        ${sizeStyles[size]}
+        ${rounded ? 'rounded-full' : 'rounded'}
+        bg-surface text-text font-medium
+        ${className}
+      `}
+      role="img"
+      aria-label={alt || name || 'Avatar'}
+      {...props}
     >
       {src ? (
         <img src={src} alt={alt} className="w-full h-full object-cover" />
       ) : (
-        <span className="text-text font-medium">
-          {fallback || alt.charAt(0).toUpperCase()}
-        </span>
+        <span>{initials}</span>
       )}
     </div>
   );
 };
 
 export default Avatar;
+---

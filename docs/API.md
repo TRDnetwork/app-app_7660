@@ -1,19 +1,12 @@
-# Portfolio Pro API Documentation
+# API Documentation
 
-## Overview
+## Base URL
+All endpoints are relative to your deployment root:  
+`https://your-site.vercel.app`
 
-The Portfolio Pro site includes a single serverless API endpoint for handling contact form submissions. All functionality is stateless and requires no database.
+## `POST /api/contact` — Submit Contact Form
 
-- **Base URL**: `/api/contact`
-- **Host**: Same as frontend (Vercel serverless function)
-- **Authentication**: None (protected via honeypot and rate limiting)
-- **Content-Type**: `application/json`
-
----
-
-## `POST /api/contact`
-
-Sends a contact form submission via email to the site owner and optionally to the user.
+Sends a contact form submission via email using Resend API.
 
 ### Request
 
@@ -23,154 +16,138 @@ Content-Type: application/json
 ```
 
 **Body**
-| Field       | Type   | Required | Description |
-|------------|--------|----------|-------------|
-| `name`     | string | Yes      | Full name of sender |
-| `email`    | string | Yes      | Valid email address |
-| `message`  | string | Yes      | Message content |
-| `bot-field`| string | No       | Honeypot field — must be empty |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Sender's full name |
+| `email` | string | Yes | Sender's email address |
+| `message` | string | Yes | Message content |
+| `bot-field` | string | Yes | Honeypot field — must be empty |
 
-> 💡 The `bot-field` is a hidden form field. Bots that fill it will be silently rejected.
-
-**Example Request**
+**Example**
 ```json
 {
-  "name": "Alex Morgan",
-  "email": "alex@example.com",
-  "message": "I'd love to discuss a potential collaboration.",
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "message": "I love your work and would like to collaborate!",
   "bot-field": ""
 }
 ```
 
-**cURL Command**
-```bash
-curl -X POST https://portfolio-pro.vercel.app/api/contact \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Alex Morgan",
-    "email": "alex@example.com",
-    "message": "Let's work together!",
-    "bot-field": ""
-  }'
-```
-
 ### Responses
 
-#### ✅ 200 OK — Success
-Returned when email is sent successfully or spam is detected.
-
-**Spam Detected (Honeypot Triggered)**
-```json
-{ "success": true }
-```
-> 🤫 Silent success to avoid revealing spam detection to bots.
-
-**Email Sent Successfully**
-```json
-{ "success": true }
-```
-
-#### ❌ 400 Bad Request — Validation Error
-Returned when required fields are missing or email is invalid.
-
+**200 OK — Success**
 ```json
 {
-  "message": "All fields are required."
+  "success": true,
+  "messageId": "123e4567-e89b-12d3-a456-426614174000"
+}
+```
+- Email sent successfully to both owner and sender
+- Success toast should appear on client
+
+**400 Bad Request — Validation Error**
+```json
+{
+  "error": "All fields are required"
 }
 ```
 or
 ```json
 {
-  "message": "Please provide a valid email address."
+  "error": "Invalid email format"
 }
 ```
 
-#### ❌ 405 Method Not Allowed
-Returned for non-POST requests.
-
+**405 Method Not Allowed**
 ```json
 {
-  "message": "Method not allowed"
+  "error": "Method not allowed"
 }
 ```
+- Only POST requests accepted
 
-#### ❌ 500 Internal Server Error
-Returned when email sending fails.
-
+**429 Too Many Requests**
 ```json
 {
-  "message": "Failed to send message. Please try again later."
+  "error": "Too many requests. Please try again later."
 }
 ```
+- Rate limit exceeded (5 requests per 10 seconds per IP)
+
+**500 Internal Server Error**
+```json
+{
+  "error": "Failed to send email"
+}
+```
+- Resend API failure or unexpected server error
 
 ### Email Delivery
 
 Two emails are sent on successful submission:
+1. **To site owner** (`OWNER_EMAIL`): Contains full message details
+2. **To sender**: Confirmation email with thank-you message
 
-#### 1. Notification to Site Owner
-- **From**: `onboarding@resend.dev` (configurable)
-- **To**: `process.env.OWNER_EMAIL`
-- **Subject**: `New Contact Form Submission from {name}`
-- **Content**: Includes name, email, and message in formatted HTML
+Both use HTML templates with warm minimalism styling.
 
-#### 2. Confirmation to User
-- **From**: `onboarding@resend.dev`
-- **To**: User's email
-- **Subject**: `Thank you for reaching out!`
-- **Content**: Thank-you message with optional links
+### Rate Limiting
 
----
+- Implemented using Upstash Redis
+- 5 requests allowed per 10 seconds per IP address
+- Uses `x-forwarded-for` header for IP detection
+- Fail-open strategy: If Redis is unreachable, request proceeds (logged to Sentry)
 
-## Security & Spam Protection
+**Environment Variables Required**
+- `UPSTASH_REDIS_REST_URL`
+- `UPSTASH_REDIS_REST_TOKEN`
 
-### Honeypot Field
-- Hidden input named `bot-field`
-- If filled, request is silently accepted (200) but no email sent
-- Prevents bot spam without CAPTCHA
+### Security
 
-### Input Validation
-- All three fields (`name`, `email`, `message`) are required
-- Email must match basic regex pattern: `^\S+@\S+\.\S+$`
+- **Honeypot protection**: Requests with `bot-field` populated are silently accepted but not processed
+- **Input validation**: All fields required, email format validated
+- **No sensitive data**: `RESEND_API_KEY` never exposed to client
+- **Error handling**: Generic error messages to avoid information leakage
 
-### Rate Limiting (Recommended)
-Not currently implemented. For production, add Upstash Redis rate limiting:
+### cURL Examples
 
-```ts
-import { Ratelimit } from '@upstash/ratelimit';
-import { Redis } from '@upstash/redis';
-
-const ratelimit = new Ratelimit({
-  redis: Redis.fromEnv(),
-  limiter: Ratelimit.slidingWindow(5, '10 s')
-});
-```
-
----
-
-## Error Handling
-
-- **Client Errors (4xx)**: Clear, user-friendly messages
-- **Server Errors (5xx)**: Generic message to avoid exposing internals
-- **Logging**: Full error details logged server-side (Vercel logs)
-
----
-
-## Testing the API
-
-Use the provided test suite:
+**Successful Submission**
 ```bash
-npm test
+curl -X POST https://your-site.vercel.app/api/contact \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Test User",
+    "email": "test@example.com",
+    "message": "Hello from curl!",
+    "bot-field": ""
+  }'
 ```
 
-Or test manually with cURL as shown above.
+**Rate Limit Test**
+```bash
+# Run this 6 times quickly to trigger rate limit
+curl -X POST https://your-site.vercel.app/api/contact \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Test","email":"test@example.com","message":"Test","bot-field":""}'
+```
 
-Check Vercel logs and [Resend Dashboard](https://resend.com/emails) for delivery status.
+## `GET /api/health` — Health Check
+
+Simple endpoint to verify server status.
+
+### Request
+No parameters required.
+
+### Response (200 OK)
+```json
+{
+  "status": "ok"
+}
+```
+
+Useful for uptime monitoring and deployment verification.
 
 ---
 
-## Deployment Notes
-
-- Endpoint is a Vercel serverless function (`api/contact.ts`)
-- Requires `RESEND_API_KEY` and `OWNER_EMAIL` environment variables
-- No CORS configuration needed — same origin
-- No authentication or API keys exposed to client
+**Note**: All API routes are serverless functions hosted on Vercel.  
+No authentication required.  
+Monitor usage and errors via Vercel Logs and Sentry.

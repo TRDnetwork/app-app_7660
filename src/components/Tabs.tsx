@@ -1,47 +1,70 @@
 import React, { useState } from 'react';
 
-interface TabProps {
+export interface TabItem {
+  id: string;
   label: string;
-  children: React.ReactNode;
+  content: React.ReactNode;
 }
 
-interface TabsProps {
-  children: React.ReactElement<TabProps>[];
-  defaultIndex?: number;
+export interface TabsProps {
+  tabs: TabItem[];
+  defaultActiveId?: string;
+  onTabChange?: (id: string) => void;
+  variant?: 'default' | 'underline';
+  fullWidth?: boolean;
 }
 
-const Tabs: React.FC<TabsProps> = ({ children, defaultIndex = 0 }) => {
-  const [activeIndex, setActiveIndex] = useState(defaultIndex);
+export const Tabs = ({ 
+  tabs, 
+  defaultActiveId, 
+  onTabChange, 
+  variant = 'default',
+  fullWidth = false 
+}: TabsProps) => {
+  const [activeId, setActiveId] = useState(defaultActiveId || tabs[0].id);
+
+  const handleTabClick = (id: string) => {
+    setActiveId(id);
+    onTabChange?.(id);
+  };
 
   return (
-    <div className="w-full">
-      <div className="border-b border-surface flex">
-        {children.map((child, index) => (
+    <div className={fullWidth ? 'w-full' : ''}>
+      <div 
+        className={`
+          flex border-b border-surface mb-4
+          ${variant === 'underline' ? 'pb-2' : ''}
+          ${fullWidth ? 'w-full' : ''}
+        `}
+      >
+        {tabs.map((tab) => (
           <button
-            key={index}
-            className={[
-              'py-2 px-4 font-medium text-text-dim border-b-2 -mb-px',
-              activeIndex === index
-                ? 'border-accent text-text'
-                : 'border-transparent hover:text-text',
-            ].join(' ')}
-            onClick={() => setActiveIndex(index)}
+            key={tab.id}
+            className={`
+              px-4 py-2 font-medium text-text-dim border-b-2 transition-colors duration-200
+              ${variant === 'underline' 
+                ? 'hover:text-text' 
+                : 'rounded-t-md hover:bg-surface'}
+              ${activeId === tab.id 
+                ? `${variant === 'underline' ? 'border-accent text-text' : 'bg-surface border-surface text-text'}` 
+                : 'border-transparent hover:border-surface'}
+            `}
+            onClick={() => handleTabClick(tab.id)}
             role="tab"
-            aria-selected={activeIndex === index}
-            tabIndex={activeIndex === index ? 0 : -1}
+            aria-selected={activeId === tab.id}
+            aria-controls={`tab-panel-${tab.id}`}
           >
-            {child.props.label}
+            {tab.label}
           </button>
         ))}
       </div>
-      <div className="mt-4">
-        {children[activeIndex]}
+
+      <div role="tabpanel" id={`tab-panel-${activeId}`}>
+        {tabs.find(tab => tab.id === activeId)?.content}
       </div>
     </div>
   );
 };
 
-const Tab: React.FC<TabProps> = ({ children }) => <>{children}</>;
-
-Tabs.Tab = Tab;
 export default Tabs;
+---
