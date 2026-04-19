@@ -1,1 +1,1 @@
-// This app uses React + Vite — all logic is in TypeScript React components
+/* This app uses React + Vite. All logic is in React components. No standalone app.js needed. */

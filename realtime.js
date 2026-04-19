@@ -1,1 +1,1 @@
-// Static site with no Supabase realtime requirements
+/* Static site with no realtime requirements. No realtime.js needed. */
