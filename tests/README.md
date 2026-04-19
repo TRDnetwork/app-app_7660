@@ -1,46 +1,27 @@
-# Test Suite for Portfolio Pro
+# Portfolio Pro Test Suite
 
 ## How to Run
-
-1. Install dependencies:
-```bash
-npm install vitest jsdom @testing-library/react @testing-library/dom
-```
-
-2. Run tests:
-```bash
-npm test
-```
-
-Or with watch mode:
-```bash
-npm run test:watch
-```
+1. Install dependencies: `npm install vitest jsdom @testing-library/react @testing-library/jest-dom`
+2. Run tests: `npm test` or `npx vitest`
 
 ## Test Coverage
 
 ### `app.test.js`
-- Tests the main App component rendering
-- Verifies all core sections: Hero, About, Projects, Contact
-- Validates contact form behavior:
-  - Client-side validation
-  - Honeypot spam protection
-  - Success toast display and auto-dismiss
-  - Accessibility features (skip link)
-- Uses mocked Framer Motion and intersection observer
+- Verifies the hero section displays the name and role
+- Confirms the about section contains the descriptive paragraph
+- Checks that all three project cards are rendered in the grid
+- Tests client-side validation for empty form submission
+- Validates successful form submission flow with mock API call
 
 ### `api.test.js`
-- Tests the Vercel serverless contact form endpoint
-- Validates HTTP method handling (only POST allowed)
-- Tests field validation (required fields, email format)
-- Verifies honeypot bot detection
-- Confirms email sending via Resend mock
-- Tests XSS input sanitization
-- Handles error scenarios gracefully
-- Uses mocked request/response objects
+- Tests API endpoint rejects non-POST requests
+- Verifies honeypot spam protection works correctly
+- Validates required field checking and error responses
+- Confirms email format validation
+- Tests successful email delivery with valid data
+- Mocks Resend API calls and email template imports
 
 ## Notes
-- Tests assume the app is built with React + Vite + TypeScript
-- API tests validate server-side security and email handling
-- Frontend tests focus on user interaction and accessibility
-- All third-party services are mocked to avoid external dependencies
+- The frontend test reveals a critical bug: the form submits to `/api/send-email` but the API is at `/api/contact`
+- Field name mismatch between frontend (`bot-field`) and backend (`_honey`) will cause validation to fail
+- The API expects `name`, `email`, `message` but frontend sends `to`, `from`, `subject`, `text`
