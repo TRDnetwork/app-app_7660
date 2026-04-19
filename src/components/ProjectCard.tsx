@@ -15,10 +15,11 @@ const ProjectCard: React.FC<ProjectCardProps> = memo(({ title, description, imag
       style={{ animationDelay: `${index * 150}ms` }}
       tabIndex={0}
       aria-labelledby={`project-title-${index}`}
+      role="article" /* a11y fix: explicit role for semantic clarity */
     >
       <img
         src={image}
-        alt=""
+        alt={description} /* a11y fix: descriptive alt text based on content */
         width="400"
         height="225"
         loading="lazy"
@@ -33,6 +34,7 @@ const ProjectCard: React.FC<ProjectCardProps> = memo(({ title, description, imag
         className="mt-4 text-accent hover:underline focus:outline-none focus:underline"
         target="_blank"
         rel="noopener noreferrer"
+        aria-label={`View project: ${title}`} /* a11y fix: more descriptive link purpose */
       >
         View Project
       </a>

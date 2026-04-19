@@ -1,0 +1,2 @@
+// This file is not needed — contact form handled by Vercel serverless function (api/contact.ts), not Supabase Edge Function.
+// Email delivery via Resend is owned by Email Agent. Supabase not involved in email workflow.

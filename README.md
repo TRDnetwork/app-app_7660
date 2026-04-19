@@ -1,208 +1,223 @@
 # Portfolio Pro
 
-A clean, responsive personal portfolio site with project showcase and contact form. Built with React, Vite, and Tailwind CSS — deployed on Vercel with serverless email handling via Resend.
+A warm minimalist personal portfolio site with project showcase and contact form powered by React and Vite.
 
-## ✨ Features
+## Features
 
-- **Hero Section**: Prominent name and role display with elegant typography
-- **About Section**: Descriptive paragraph highlighting skills and philosophy
-- **Project Showcase**: Three featured projects in a responsive grid layout (1 column mobile → 3 desktop)
-- **Contact Form**:
-  - Client-side validation for name, email, and message
-  - Honeypot spam protection
-  - Serverless email delivery via Resend
-  - Success/error toast with 4s auto-dismiss and manual close
-- **Performance Optimized**:
-  - Lazy-loaded components
-  - Code splitting
-  - Inlined critical styles
-- **Secure**:
-  - Server-side email sending
-  - Environment variable protection
-  - Input validation
-  - Honeypot anti-bot field
+- ✅ Responsive hero section with headline, subheading, and scroll CTA
+- ✅ About section with single warm-tone paragraph
+- ✅ Three project cards in a responsive grid (1 column mobile, 2 tablet, 3 desktop)
+- ✅ Secure contact form with validation, honeypot, and success/error toasts
+- ✅ End-to-end email delivery via Resend API
+- ✅ Rate limiting using Upstash Redis (5 requests per 10 seconds per IP)
+- ✅ Spam protection with honeypot field
+- ✅ Client-side form validation and error handling
+- ✅ Success toast with auto-dismiss (4s) and manual close option
+- ✅ Built-in analytics with PostHog
+- ✅ Error tracking with Sentry
+- ✅ Optimized performance: lazy loading, code splitting, font preloading
 
-## 🎨 Design
+## Tech Stack
 
-- **Aesthetic**: Warm minimalism with editorial contrast
-- **Colors**: Beige background (`#faf8f5`), dark green text (`#1a2e1a`), burnt orange accents (`#e66000`)
-- **Typography**: 
-  - Headings: **Fraunces** (serif)
-  - Body: **Satoshi** (sans-serif)
-- **Layout**: Centered vertical scroll, max-width 1200px, responsive padding
-- **Interactions**: 
-  - Framer Motion slide-up animations on scroll
-  - Card hover-lift effect
-  - Focus glow on form fields
-  - Toast notifications with smooth entrance/exit
+**Frontend**
+- React 18 + TypeScript + Vite
+- Tailwind CSS (CDN) with custom warm minimalism theme
+- Framer Motion for scroll animations
 
-## ⚙️ Tech Stack
+**Backend**
+- Vercel Serverless Functions (`/api/contact`, `/api/health`)
+- Resend API for email delivery
+- Upstash Redis for rate limiting
 
-| Layer       | Technology |
-|-----------|------------|
-| Frontend  | React + Vite |
-| Styling   | Tailwind CSS (CDN + inlined critical styles) |
-| Animation | Framer Motion (via Tailwind keyframes) |
-| Email     | Resend (serverless via Vercel function) |
-| Hosting   | Vercel |
-| Testing   | Vitest + @testing-library/react |
-| Security  | Honeypot, server-side validation, env var protection |
+**Analytics & Monitoring**
+- PostHog (autocapture + custom events)
+- Sentry (error tracking)
 
-## 📁 Folder Structure
+**Deployment**
+- Vercel (serverless functions, edge network)
+- Environment variable protection (no client-side leaks)
 
-```
-portfolio-pro/
-├── index.html                     # Main entry with inlined Tailwind & fonts
-├── api/
-│   └── contact.ts                 # Vercel serverless function for email
-├── src/
-│   ├── main.tsx                   # React entry point
-│   ├── App.tsx                    # Main app with lazy-loaded sections
-│   ├── components/
-│   │   ├── AboutSection.tsx       # About content
-│   │   └── ContactSection.tsx     # Contact form with validation
-│   └── emails/                    # (Not used — templates inlined in API)
-├── tests/
-│   ├── app.test.js                # Frontend component tests
-│   └── api.test.js                # API endpoint tests
-├── SECURITY_REPORT.md             # Security audit findings
-├── PERFORMANCE_REPORT.md          # Optimization summary
-└── EMAIL_SETUP.md                 # Resend configuration guide
-```
+## Setup Instructions
 
-## 🔧 Setup Instructions
+### 1. Clone and Install
 
-### 1. Clone & Install
 ```bash
 git clone https://github.com/your-username/portfolio-pro.git
 cd portfolio-pro
 npm install
 ```
 
-### 2. Configure Environment Variables
-Create `.env.local` in the project root:
+### 2. Environment Variables
+
+Create a `.env` file in the root directory:
+
 ```env
-RESEND_API_KEY=re_XXXXXXXXXXXXXXXXXXXXX
+# Required for email delivery
+RESEND_API_KEY=your_resend_api_key
 OWNER_EMAIL=you@yourdomain.com
+
+# Optional: Rate limiting
+UPSTASH_REDIS_REST_URL=https://your-redis.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your_redis_token
+
+# Analytics
+VITE_POSTHOG_KEY=your_posthog_key
+VITE_SENTRY_DSN=https://your-sentry-dsn@o123.ingest.sentry.io/456
 ```
 
-> 🔐 Never commit `.env.local`. These are only available server-side.
+> ⚠️ **Never commit `.env` to version control.** Use Vercel's environment variable dashboard in production.
 
 ### 3. Run Locally
+
 ```bash
 npm run dev
 ```
+
 Visit `http://localhost:5173`
 
-### 4. Deploy to Vercel
+### 4. Build for Production
+
+```bash
+npm run build
+```
+
+### 5. Deploy to Vercel
+
 ```bash
 vercel
 ```
-Or connect your GitHub repo via [Vercel Dashboard](https://vercel.com)
 
-Ensure environment variables are set in Vercel Project Settings → Environment Variables.
+Or connect your GitHub repository to Vercel for automatic deployments.
 
-## 📨 Email Setup
+## API Endpoints
 
-This app uses **Resend** for reliable, branded email delivery.
+### `POST /api/contact` — Submit Contact Form
 
-1. Get your API key at [resend.com/api-keys](https://resend.com/api-keys)
-2. Set `RESEND_API_KEY` and `OWNER_EMAIL` in Vercel
-3. (Recommended) Verify your domain in Resend for better deliverability
-
-See [EMAIL_SETUP.md](./EMAIL_SETUP.md) for full instructions.
-
-## 🧪 Testing
-
-Run the test suite:
-```bash
-npm test
-```
-
-Tests include:
-- Hero section renders correctly
-- About section displays content
-- Project cards appear in responsive grid
-- Form validation works client-side
-- API endpoint handles spam, validation, and email delivery
-
-## 🚀 API Endpoints
-
-### `POST /api/contact`
-
-Sends contact form submission via email.
-
-**Request Body**:
+**Request Body**
 ```json
 {
   "name": "Jane Doe",
   "email": "jane@example.com",
-  "message": "Hello! I'd love to collaborate.",
-  "bot-field": "" // honeypot (hidden)
+  "message": "Hello! I'd like to work together.",
+  "bot-field": ""
 }
 ```
 
-**Success Response (200)**:
+**Success Response (200)**
 ```json
-{ "success": true }
+{
+  "success": true,
+  "messageId": "123e4567-e89b-12d3-a456-426614174000"
+}
 ```
 
-**Error Responses**:
-- `400`: Missing fields or invalid email
-- `405`: Method not allowed
-- `500`: Server error
+**Error Responses**
+- `400 Bad Request`: Missing fields or invalid email
+- `405 Method Not Allowed`: Non-POST request
+- `429 Too Many Requests`: Rate limit exceeded (5/10s per IP)
+- `500 Internal Server Error`: Email sending failed
 
-**Emails Sent**:
-1. **Notification** to site owner with submission details
-2. **Confirmation** to user with thank-you message
-
-### Example cURL
+**Example cURL**
 ```bash
-curl -X POST https://portfolio-pro.vercel.app/api/contact \
+curl -X POST https://your-site.vercel.app/api/contact \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Test User",
     "email": "test@example.com",
-    "message": "This is a test message.",
+    "message": "Hi there!",
     "bot-field": ""
   }'
 ```
 
-## 🛡️ Security
+### `GET /api/health` — Health Check
 
-- **Honeypot Protection**: Hidden `bot-field` blocks spam bots
-- **Server-Side Email**: API key never exposed to client
-- **Input Validation**: Required fields and email format checked
-- **Error Handling**: Generic messages to users, detailed logs only server-side
-- **Rate Limiting**: Not implemented — see recommendations below
+**Response (200)**
+```json
+{ "status": "ok" }
+```
 
-> ⚠️ **Critical Security Note**: The sender email is currently hardcoded. For production, use an environment variable.
+## Folder Structure
 
-## 📈 Performance
+```
+portfolio-pro/
+├── api/
+│   ├── contact.ts          # Contact form handler (Vercel serverless)
+│   └── health.ts           # Health check endpoint
+├── public/                 # Static assets
+├── src/
+│   ├── components/         # Reusable UI components
+│   │   ├── ContactForm.tsx
+│   │   ├── Hero.tsx
+│   │   ├── ProjectCard.tsx
+│   │   └── Toast.tsx
+│   ├── emails/             # Email HTML templates
+│   ├── lib/                # Utility libraries
+│   └── App.tsx             # Main layout
+├── tests/                  # Test suite
+├── .env.example            # Environment variable template
+├── vite.config.ts          # Vite configuration
+└── vercel.json             # Vercel deployment config
+```
 
-- **Bundle Size**: ~31 KB (after optimizations)
-- **Optimizations**:
-  - Lazy loading of non-critical sections
-  - Code splitting via dynamic imports
-  - Memoized components to prevent re-renders
-  - Deferred imports in serverless function
-  - Preloaded critical fonts
+## Security
 
-See [PERFORMANCE_REPORT.md](./PERFORMANCE_REPORT.md) for full details.
+- ✅ **Honeypot spam protection**: Hidden `bot-field` blocks automated submissions
+- ✅ **Input validation**: Required fields and email format checked server-side
+- ✅ **Rate limiting**: Upstash Redis limits 5 requests per 10 seconds per IP
+- ✅ **Environment isolation**: No sensitive variables exposed to frontend
+- ✅ **Error handling**: Generic 5xx messages, detailed logs only on server
+- ✅ **XSS prevention**: User input sanitized before email rendering
 
-## 📌 Deployment Notes
+## Performance
 
-- **Vercel-Only**: Optimized for Vercel deployment
-- **Static Site**: No database or authentication
-- **Serverless Functions**: `/api/contact` runs as Vercel Edge Function
-- **No Build Issues**: Tailwind via CDN avoids plugin complexity
+- **Bundle size**: ~108KB (gzipped) after optimizations
+- **Key optimizations**:
+  - Lazy-loaded Framer Motion
+  - Code splitting for vendor/motion chunks
+  - Font preloading
+  - Image lazy loading
+  - Critical CSS inlined
+  - Vendor chunk caching
 
-## 📚 Documentation
+See `PERFORMANCE_REPORT.md` for full details.
 
-- [EMAIL_SETUP.md](./EMAIL_SETUP.md) — Configure Resend email delivery
-- [SECURITY_REPORT.md](./SECURITY_REPORT.md) — Security audit and fixes
-- [PERFORMANCE_REPORT.md](./PERFORMANCE_REPORT.md) — Optimization strategies
+## Testing
+
+```bash
+npm test
+```
+
+Test suite includes:
+- Component rendering (React Testing Library)
+- Form validation flows
+- API endpoint behavior
+- Honeypot and rate limiting logic
+- Mocked Resend email delivery
+
+## Email Setup
+
+See `EMAIL_SETUP.md` for detailed instructions on configuring Resend, domain verification, and testing.
+
+## Analytics
+
+PostHog events tracked:
+- Page views (`$pageview`)
+- CTA button clicks (`cta_clicked`)
+- Form submission attempts (`form_submitted`)
+- Form success (`form_success`)
+
+Configure with `VITE_POSTHOG_KEY` environment variable.
+
+## Deployment Notes
+
+- Deployed via Vercel with zero configuration
+- Serverless functions automatically scaled
+- Environment variables secured in Vercel dashboard
+- Recommended: Set up custom domain and SSL
+- Monitor logs and errors via Vercel + Sentry
 
 ---
 
-Made with ❤️ using React, Vite, and Tailwind — deployed with confidence on Vercel.
+Built with ❤️ using warm minimalism design principles:  
+Beige background (`#faf8f5`), dark green text (`#1a2e1a`), burnt orange accents (`#e66000`).  
+Fonts: Fraunces (headings), Satoshi (body).

@@ -1,1 +1,1 @@
-// No realtime functionality needed for static site
+/* No realtime functionality required for this static site */

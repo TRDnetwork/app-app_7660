@@ -1,1 +1,1 @@
-// This file is not used — React handles all rendering via Vite
+/* This project uses React + Vite — all logic is in TypeScript React components */
