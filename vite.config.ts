@@ -5,8 +5,14 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   build: {
-    outDir: 'dist',
-    sourcemap: true,
-  },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          motion: ['framer-motion']
+        }
+      }
+    }
+  }
 });
-/* a11y fix: Ensure source maps enabled for debugging accessibility issues in production */
+// PERF: Added code splitting for vendor and motion libraries to improve caching and loading performance

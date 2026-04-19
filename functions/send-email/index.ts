@@ -1,0 +1,2 @@
+// This function is not required here — email sending is handled by Vercel serverless function (api/send-email.ts) in the Next.js/Express layer, not a Supabase Edge Function.
+// Supabase Edge Functions are only for privileged database operations. Email delivery via Resend belongs to the Email Agent and runs on Vercel.

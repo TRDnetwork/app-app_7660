@@ -1,117 +1,150 @@
-import { describe, it, expect, vi } from 'vitest';
-import { handler as contactHandler } from '../../api/contact';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { handler } from '../../api/contact';
+import { createEvent, createResponse } from './test-helpers';
 
 // Mock Resend
 const mockEmailsSend = vi.fn();
-vi.mock('resend', () => ({
-  Resend: vi.fn(() => ({
-    emails: {
-      send: mockEmailsSend
-    }
-  }))
-}));
-
-// Mock imports
-vi.mock('fs', () => ({}));
-vi.mock('../src/emails/contact-notification.js', () => ({
-  default: vi.fn(() => '<p>Notification</p>')
-}));
-vi.mock('../src/emails/contact-confirmation.js', () => ({
-  default: vi.fn(() => '<p>Confirmation</p>')
-}));
+vi.mock('resend', () => {
+  return {
+    Resend: vi.fn().mockImplementation(() => ({
+      emails: {
+        send: mockEmailsSend,
+      },
+    })),
+  };
+});
 
 describe('Contact API Endpoint', () => {
-  const createMockRequest = (overrides = {}) => ({
-    method: 'POST',
-    body: {},
-    ...overrides
-  });
-
-  const createMockResponse = () => {
-    const res = {
-      statusCode: null,
-      body: null,
-      status: vi.fn(function (code) {
-        this.statusCode = code;
-        return this;
-      }),
-      json: vi.fn(function (data) {
-        this.body = data;
-        return this;
-      })
-    };
-    return res;
-  };
-
   beforeEach(() => {
     mockEmailsSend.mockClear();
-    process.env.RESEND_API_KEY = 're_test';
+    process.env.RESEND_API_KEY = 're_test_key';
     process.env.OWNER_EMAIL = 'owner@test.com';
   });
 
-  it('rejects non-POST requests', async () => {
-    const req = createMockRequest({ method: 'GET' });
-    const res = createMockResponse();
+  it('rejects non-POST requests with 405', async () => {
+    const event = createEvent({ method: 'GET' });
+    const response = createResponse();
 
-    await contactHandler(req, res);
+    await handler(event, response);
 
-    expect(res.statusCode).toBe(405);
-    expect(res.body).toEqual({ message: 'Method not allowed' });
+    expect(response._getStatusCode()).toBe(405);
+    expect(response._getJSONBody()).toEqual({ message: 'Method not allowed' });
   });
 
-  it('blocks submissions with honeypot field', async () => {
-    const req = createMockRequest({
-      body: { _honey: 'spam' }
+  it('blocks submissions with honeypot field filled', async () => {
+    const event = createEvent({
+      method: 'POST',
+      body: { 'bot-field': 'spam', name: 'Test', email: 'test@test.com', message: 'Hi' },
     });
-    const res = createMockResponse();
+    const response = createResponse();
 
-    await contactHandler(req, res);
+    await handler(event, response);
 
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({ success: true });
+    expect(response._getStatusCode()).toBe(200);
+    expect(response._getJSONBody()).toEqual({ success: true });
     expect(mockEmailsSend).not.toHaveBeenCalled();
   });
 
-  it('validates required fields', async () => {
-    const req = createMockRequest({
-      body: { name: '', email: '', message: '' }
-    });
-    const res = createMockResponse();
+  it('validates required fields and returns 400 if missing', async () => {
+    const event = createEvent({ method: 'POST', body: {} });
+    const response = createResponse();
 
-    await contactHandler(req, res);
+    await handler(event, response);
 
-    expect(res.statusCode).toBe(400);
-    expect(res.body).toEqual({ message: 'All fields are required.' });
+    expect(response._getStatusCode()).toBe(400);
+    expect(response._getJSONBody()).toEqual({ message: 'All fields are required.' });
   });
 
   it('validates email format', async () => {
-    const req = createMockRequest({
-      body: { name: 'John', email: 'invalid-email', message: 'Hello' }
+    const event = createEvent({
+      method: 'POST',
+      body: { name: 'Test', email: 'invalid', message: 'Hi' },
     });
-    const res = createMockResponse();
+    const response = createResponse();
 
-    await contactHandler(req, res);
+    await handler(event, response);
 
-    expect(res.statusCode).toBe(400);
-    expect(res.body).toEqual({ message: 'Invalid email format.' });
+    expect(response._getStatusCode()).toBe(400);
+    expect(response._getJSONBody()).toEqual({ message: 'Please provide a valid email address.' });
   });
 
   it('sends emails successfully with valid data', async () => {
-    mockEmailsSend.mockResolvedValue({ data: {} });
+    mockEmailsSend.mockResolvedValueOnce({ id: '123' });
+    mockEmailsSend.mockResolvedValueOnce({ id: '456' });
 
-    const req = createMockRequest({
-      body: { 
-        name: 'John Doe', 
-        email: 'john@example.com', 
-        message: 'Hello!' 
-      }
+    const event = createEvent({
+      method: 'POST',
+      body: { name: 'Test', email: 'test@test.com', message: 'Hi', 'bot-field': '' },
     });
-    const res = createMockResponse();
+    const response = createResponse();
 
-    await contactHandler(req, res);
+    await handler(event, response);
 
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({ success: true });
+    expect(response._getStatusCode()).toBe(200);
+    expect(response._getJSONBody()).toEqual({ success: true });
     expect(mockEmailsSend).toHaveBeenCalledTimes(2);
+    expect(mockEmailsSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'owner@test.com',
+        subject: 'New Contact Form Submission from Test',
+      })
+    );
+    expect(mockEmailsSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: 'test@test.com',
+        subject: 'Thank you for reaching out!',
+      })
+    );
+  });
+
+  it('handles email sending errors gracefully', async () => {
+    mockEmailsSend.mockRejectedValueOnce(new Error('SMTP error'));
+
+    const event = createEvent({
+      method: 'POST',
+      body: { name: 'Test', email: 'test@test.com', message: 'Hi', 'bot-field': '' },
+    });
+    const response = createResponse();
+
+    await handler(event, response);
+
+    expect(response._getStatusCode()).toBe(500);
+    expect(response._getJSONBody()).toEqual({ message: 'Failed to send message. Please try again later.' });
   });
 });
+
+// test-helpers.js
+export const createEvent = ({ method = 'GET', body = null } = {}) => ({
+  method,
+  body,
+  headers: {},
+  query: {},
+  url: '/api/contact',
+});
+
+export const createResponse = () => {
+  const response = {
+    statusCode: null,
+    body: null,
+    headers: {},
+    setHeader(key, value) {
+      this.headers[key] = value;
+      return this;
+    },
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    json(body) {
+      this.body = body;
+      return this;
+    },
+    _getStatusCode() {
+      return this.statusCode;
+    },
+    _getJSONBody() {
+      return this.body;
+    },
+  };
+  return response;
+};

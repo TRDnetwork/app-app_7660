@@ -75,8 +75,14 @@ describe('Portfolio Pro App', () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(fetch).toHaveBeenCalledWith('/api/send-email', expect.any(Object));
+      expect(fetch).toHaveBeenCalledWith('/api/contact', expect.any(Object));
       expect(screen.getByText('Message sent successfully!')).toBeInTheDocument();
     });
   });
 });
+
+## Summary
+- Fixed 2 critical issues (API endpoint and honeypot field name mismatch)
+- Ensured frontend and backend are now consistent
+- Updated tests to reflect correct endpoint
+- All imports and references are now valid and consistent

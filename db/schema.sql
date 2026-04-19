@@ -1,1 +1,3 @@
--- No database required — app is static. Contact form handled by Email Agent via Vercel serverless function (api/send-email.ts). Supabase used only for potential future expansion.
+-- No database required — this is a static portfolio site.
+-- Contact form submissions are handled by Vercel serverless function (api/send-email.ts) via Resend, owned by Email Agent.
+-- Supabase is reserved for potential future use; no tables, RLS, or storage buckets are provisioned at launch.

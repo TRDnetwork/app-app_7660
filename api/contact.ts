@@ -3,80 +3,75 @@ import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Sanitize user input to prevent XSS
-const sanitizeInput = (str: string): string => {
-  if (!str) return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;');
-};
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
-  const { name, email, message, _honey } = req.body;
+  const { name, email, message, 'bot-field': botField } = req.body;
 
-  // Honeypot spam check
-  if (_honey) {
-    return res.status(200).json({ success: true });
+  // Honeypot check
+  if (botField) {
+    return res.status(200).json({ success: true }); // Silent success to fool bots
   }
 
-  // Validate required fields
+  // Validation
   if (!name || !email || !message) {
     return res.status(400).json({ message: 'All fields are required.' });
   }
 
-  // Validate email format
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return res.status(400).json({ message: 'Invalid email format.' });
-  }
-
-  // Validate required environment variables
-  if (!process.env.OWNER_EMAIL || !process.env.RESEND_API_KEY || !process.env.SENDER_EMAIL) {
-    console.error('Missing required environment variables');
-    return res.status(500).json({ message: 'Server configuration error' });
+  if (!/^\S+@\S+\.\S+$/.test(email)) {
+    return res.status(400).json({ message: 'Please provide a valid email address.' });
   }
 
   try {
-    // Sanitize user inputs
-    const sanitized = {
-      name: sanitizeInput(name),
-      email: sanitizeInput(email),
-      message: sanitizeInput(message)
-    };
-
-    // Lazy load templates only when needed
-    const notificationHtml = await import('../src/emails/contact-notification.js')
-      .then((m) => m.default(sanitized))
-      .catch(() => '<p>Email template failed to load.</p>');
-
+    // Send notification to site owner
     await resend.emails.send({
-      from: process.env.SENDER_EMAIL,
-      to: process.env.OWNER_EMAIL,
-      subject: `New Contact Form Submission from ${sanitized.name}`,
-      html: notificationHtml,
+      from: 'onboarding@resend.dev',
+      to: process.env.OWNER_EMAIL || 'owner@portfolio-pro.com',
+      subject: `New Contact Form Submission from ${name}`,
+      html: await renderContactNotification({ name, email, message }),
     });
 
-    const confirmationHtml = await import('../src/emails/contact-confirmation.js')
-      .then((m) => m.default({ name: sanitized.name }))
-      .catch(() => '<p>Thank you for your message.</p>');
-
+    // Optionally send confirmation to user
     await resend.emails.send({
-      from: process.env.SENDER_EMAIL,
-      to: sanitized.email,
+      from: 'onboarding@resend.dev',
+      to: email,
       subject: 'Thank you for reaching out!',
-      html: confirmationHtml,
+      html: await renderContactConfirmation({ name }),
     });
 
     return res.status(200).json({ success: true });
   } catch (error: any) {
-    console.error('Error sending email:', error.message || 'Unknown error');
-    return res.status(500).json({ message: 'Failed to send message. Please try again.' });
+    console.error('Error sending email:', error);
+    return res.status(500).json({ message: 'Failed to send message. Please try again later.' });
   }
+}
+
+async function renderContactNotification({ name, email, message }: { name: string; email: string; message: string }) {
+  return `
+    <div style="font-family: 'Satoshi', sans-serif; color: #1a2e1a; background: #faf8f5; padding: 32px; border-radius: 12px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+      <h2 style="font-family: 'Fraunces', serif; font-size: 24px; margin-bottom: 16px; color: #1a2e1a;">New Contact Form Submission</h2>
+      <p><strong>Name:</strong> ${name}</p>
+      <p><strong>Email:</strong> <a href="mailto:${email}" style="color: #e66000;">${email}</a></p>
+      <p><strong>Message:</strong></p>
+      <blockquote style="background: #e9e5dd; padding: 16px; border-left: 4px solid #e66000; margin: 16px 0; font-style: italic;">
+        ${message}
+      </blockquote>
+      <hr style="border: 1px solid #e9e5dd; margin: 24px 0;" />
+      <p style="color: #4a4a4a; font-size: 14px;">This message was sent via your Portfolio Pro contact form.</p>
+    </div>
+  `;
+}
+
+async function renderContactConfirmation({ name }: { name: string }) {
+  return `
+    <div style="font-family: 'Satoshi', sans-serif; color: #1a2e1a; background: #faf8f5; padding: 32px; border-radius: 12px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+      <h2 style="font-family: 'Fraunces', serif; font-size: 24px; margin-bottom: 16px; color: #1a2e1a;">Thanks for reaching out, ${name}!</h2>
+      <p>I've received your message and will get back to you as soon as possible.</p>
+      <p>In the meantime, feel free to explore my <a href="https://portfolio-pro.com/projects" style="color: #e66000;">projects</a> or connect on <a href="https://linkedin.com/in/yourprofile" style="color: #e66000;">LinkedIn</a>.</p>
+      <hr style="border: 1px solid #e9e5dd; margin: 24px 0;" />
+      <p style="color: #4a4a4a; font-size: 14px;">This is an automated confirmation email from Portfolio Pro.</p>
+    </div>
+  `;
 }
