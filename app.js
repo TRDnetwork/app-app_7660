@@ -1,1 +1,1 @@
-/* This app uses React + Vite. All logic is in React components. No standalone app.js needed. */
+// This file is not used — React handles all rendering via Vite

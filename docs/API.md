@@ -1,123 +1,176 @@
-# 📡 API Documentation
+# Portfolio Pro API Documentation
 
-This portfolio uses a single serverless endpoint for secure contact form submission. All other content is static.
+## Overview
+
+The Portfolio Pro site includes a single serverless API endpoint for handling contact form submissions. All functionality is stateless and requires no database.
+
+- **Base URL**: `/api/contact`
+- **Host**: Same as frontend (Vercel serverless function)
+- **Authentication**: None (protected via honeypot and rate limiting)
+- **Content-Type**: `application/json`
 
 ---
 
 ## `POST /api/contact`
 
-Handles contact form submissions, validates input, sends emails via Resend, and prevents spam.
+Sends a contact form submission via email to the site owner and optionally to the user.
 
-### 🔐 Authentication
+### Request
 
-None required. Accessible to public. Rate limiting enforced via Upstash Redis (planned).
+**Headers**
+```
+Content-Type: application/json
+```
 
-### 📥 Request
+**Body**
+| Field       | Type   | Required | Description |
+|------------|--------|----------|-------------|
+| `name`     | string | Yes      | Full name of sender |
+| `email`    | string | Yes      | Valid email address |
+| `message`  | string | Yes      | Message content |
+| `bot-field`| string | No       | Honeypot field — must be empty |
 
-#### Headers
+> 💡 The `bot-field` is a hidden form field. Bots that fill it will be silently rejected.
 
-| Key               | Value                   |
-|-------------------|-------------------------|
-| `Content-Type`    | `application/json`      |
-| `Origin`          | Allowed domain (Vercel) |
-| `User-Agent`      | Standard browser string |
+**Example Request**
+```json
+{
+  "name": "Alex Morgan",
+  "email": "alex@example.com",
+  "message": "I'd love to discuss a potential collaboration.",
+  "bot-field": ""
+}
+```
 
-> Vercel automatically restricts function access to your deployed domain.
-
-#### Body (JSON)
-
-| Field     | Type     | Required | Description |
-|----------|----------|----------|-------------|
-| `name`   | `string` | ✅ Yes   | Full name of sender |
-| `email`  | `string` | ✅ Yes   | Valid email address |
-| `message`| `string` | ✅ Yes   | Message content (min 10 chars) |
-| `_honey` | `string` | ❌ No    | Honeypot field — if filled, request is from a bot |
-
-> 🤖 **Honeypot Note**: This field should be empty. If present and non-empty, the server returns `200 OK` without sending emails — silently rejecting bots.
-
-#### Example Request (curl)
-
+**cURL Command**
 ```bash
 curl -X POST https://portfolio-pro.vercel.app/api/contact \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Jane Doe",
-    "email": "jane@example.com",
-    "message": "Hi, I'd love to collaborate on a project!",
-    "_honey": ""
+    "name": "Alex Morgan",
+    "email": "alex@example.com",
+    "message": "Let's work together!",
+    "bot-field": ""
   }'
 ```
 
-### 📤 Response
+### Responses
 
-#### Success (Bot Detected)
-- **Status**: `200 OK`
-- **Body**:
-  ```json
-  { "success": true }
-  ```
-> Sent when `_honey` field is filled — silent rejection.
+#### ✅ 200 OK — Success
+Returned when email is sent successfully or spam is detected.
 
-#### Success (Human Submission)
-- **Status**: `200 OK`
-- **Body**:
-  ```json
-  { "success": true }
-  ```
-> Two emails are sent: one to owner, one to user.
+**Spam Detected (Honeypot Triggered)**
+```json
+{ "success": true }
+```
+> 🤫 Silent success to avoid revealing spam detection to bots.
 
-#### Client Error
-- **Status**: `400 Bad Request`
-- **Body**:
-  ```json
-  { "message": "All fields are required." }
-  ```
-  or
-  ```json
-  { "message": "Invalid email format." }
-  ```
+**Email Sent Successfully**
+```json
+{ "success": true }
+```
 
-#### Server Error
-- **Status**: `500 Internal Server Error`
-- **Body**:
-  ```json
-  { "message": "Failed to send message. Please try again later." }
-  ```
+#### ❌ 400 Bad Request — Validation Error
+Returned when required fields are missing or email is invalid.
 
-### 📨 Email Delivery
+```json
+{
+  "message": "All fields are required."
+}
+```
+or
+```json
+{
+  "message": "Please provide a valid email address."
+}
+```
 
-Two emails are sent using Resend:
+#### ❌ 405 Method Not Allowed
+Returned for non-POST requests.
 
-1. **To Owner**
-   - From: `Portfolio Pro <onboarding@resend.dev>`
-   - To: `process.env.OWNER_EMAIL`
-   - Subject: `New Message from Jane Doe`
-   - HTML: Rendered from `src/emails/contact-notification.js`
-   - Text fallback included
+```json
+{
+  "message": "Method not allowed"
+}
+```
 
-2. **To User (Confirmation)**
-   - From: `Portfolio Pro <onboarding@resend.dev>`
-   - To: User's email
-   - Subject: `Thank you for your message`
-   - HTML: Rendered from `src/emails/contact-confirmation.js`
+#### ❌ 500 Internal Server Error
+Returned when email sending fails.
 
-### ⚠️ Security & Validation
+```json
+{
+  "message": "Failed to send message. Please try again later."
+}
+```
 
-- **Honeypot Check**: Blocks bots silently
-- **Field Validation**: Ensures all required fields are present
-- **Email Format**: Regex check on `email` field
-- **Server-Only Secrets**: `RESEND_API_KEY` never exposed to client
-- **Rate Limiting**: Planned via Upstash Redis (5 requests / 10s per IP)
+### Email Delivery
 
-### 🧪 Testing Tips
+Two emails are sent on successful submission:
 
-1. Submit real form → check inbox/spam
-2. Fill `_honey` field → should return 200 OK but no emails sent
-3. Omit `email` → expect `400` with error
-4. Use invalid email → expect `400`
+#### 1. Notification to Site Owner
+- **From**: `onboarding@resend.dev` (configurable)
+- **To**: `process.env.OWNER_EMAIL`
+- **Subject**: `New Contact Form Submission from {name}`
+- **Content**: Includes name, email, and message in formatted HTML
 
-> Use [Resend Test API Key](https://resend.com/docs/api-reference/emails/send-email) (`re_123456...`) in development — no emails are delivered.
+#### 2. Confirmation to User
+- **From**: `onboarding@resend.dev`
+- **To**: User's email
+- **Subject**: `Thank you for reaching out!`
+- **Content**: Thank-you message with optional links
 
 ---
 
-✅ **Endpoint is production-ready** and secured for Vercel deployment.
+## Security & Spam Protection
+
+### Honeypot Field
+- Hidden input named `bot-field`
+- If filled, request is silently accepted (200) but no email sent
+- Prevents bot spam without CAPTCHA
+
+### Input Validation
+- All three fields (`name`, `email`, `message`) are required
+- Email must match basic regex pattern: `^\S+@\S+\.\S+$`
+
+### Rate Limiting (Recommended)
+Not currently implemented. For production, add Upstash Redis rate limiting:
+
+```ts
+import { Ratelimit } from '@upstash/ratelimit';
+import { Redis } from '@upstash/redis';
+
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(5, '10 s')
+});
+```
+
+---
+
+## Error Handling
+
+- **Client Errors (4xx)**: Clear, user-friendly messages
+- **Server Errors (5xx)**: Generic message to avoid exposing internals
+- **Logging**: Full error details logged server-side (Vercel logs)
+
+---
+
+## Testing the API
+
+Use the provided test suite:
+```bash
+npm test
+```
+
+Or test manually with cURL as shown above.
+
+Check Vercel logs and [Resend Dashboard](https://resend.com/emails) for delivery status.
+
+---
+
+## Deployment Notes
+
+- Endpoint is a Vercel serverless function (`api/contact.ts`)
+- Requires `RESEND_API_KEY` and `OWNER_EMAIL` environment variables
+- No CORS configuration needed — same origin
+- No authentication or API keys exposed to client

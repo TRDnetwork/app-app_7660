@@ -1,1 +1,1 @@
-/* Static site with no realtime requirements. No realtime.js needed. */
+// No realtime functionality needed for static site

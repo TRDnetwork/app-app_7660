@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://app_7660.vercel.app/sitemap.xml
+Sitemap: https://portfolio-pro.trdnet.app/sitemap.xml
