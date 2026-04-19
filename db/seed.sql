@@ -1,0 +1,1 @@
+-- No seed data needed — no tables exist.
